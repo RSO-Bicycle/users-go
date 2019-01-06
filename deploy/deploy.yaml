@@ -1,0 +1,95 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: users
+  namespace: bicycle
+  annotations:
+    prometheus.io/scrape: true
+    prometheus.io/port: 8081
+    prometheus.io/path: "/metricz"
+spec:
+  selector:
+    app: users
+  ports:
+  - port: 80
+    name: users
+    targetPort: users
+  - port: 8081
+    name: users-internal
+    targetPort: users-internal
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: users
+  namespace: bicycle
+spec:
+  hosts:
+  - "*"
+  gateways:
+  - api-gateway
+  http:
+  - match:
+    - uri:
+        prefix: /users
+    route:
+    - destination:
+        port:
+          number: 80
+        host: users.bicycle.svc.cluster.local
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: users
+  namespace: bicycle
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: users
+        ext: auth
+    spec:
+      imagePullSecrets:
+      - name: docker-registry
+      containers:
+      - name: users
+        image: eu.gcr.io/rso-bicycle/users:master
+        imagePullPolicy: Always
+        ports:
+        - name: users
+          containerPort: 8080
+        - name: users-internal
+          containerPort: 8081
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+          initialDelaySeconds: 60
+          periodSeconds: 5
+        env:
+        - name: SERVICE_DB_HOST
+          value: "pg-sqlproxy-gcloud-sqlproxy.system"
+        - name: SERVICE_DB_PORT
+          value: "5432"
+        - name: SERVICE_DB_DATABASE
+          value: "users"
+        - name: SERVICE_DB_USER
+          value: "postgres"
+        - name: SERVICE_DB_PASS
+          valueFrom:
+            secretKeyRef:
+              name: db-postgres
+              key: password
+        - name: SERVICE_CACHE_HOST
+          value: "cache-redis-master.system"
+        - name: SERVICE_CACHE_PORT
+          value: "6379"
+        - name: SERVICE_CACHE_PASS
+          valueFrom:
+            secretKeyRef:
+              name: cache-redis
+              key: password
+        - name: SERIVCE_KAFKA_BROKERADDR
+          value: "kafka.bicycle:9092"
