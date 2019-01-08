@@ -232,5 +232,21 @@ func createPublicRouter(log *zap.Logger, db *sql.DB, client *redis.Client) *http
 
 		w.WriteHeader(http.StatusNoContent)
 	})
+
+	// List all the users
+	router.GET("/", func(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
+		if us, err := models.Users().All(db); err != nil {
+			log.Error("loading users", zap.Error(err))
+			writeErrorResponse(w, req, internalError)
+		} else {
+			if us == nil {
+				us = models.UserSlice{}
+			}
+			b, _ := json.Marshal(us)
+			w.Header().Set("content-type", "application/json")
+			w.Write(b)
+		}
+	})
+
 	return router
 }
