@@ -242,6 +242,7 @@ func createPublicRouter(log *zap.Logger, db *sql.DB, client *redis.Client) *http
 			if us == nil {
 				us = models.UserSlice{}
 			}
+			log.Info("MIRRORED")
 			b, _ := json.MarshalIndent(us, "", "  ")
 			w.Header().Set("content-type", "application/json")
 			w.Write(b)
