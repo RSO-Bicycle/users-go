@@ -242,7 +242,7 @@ func createPublicRouter(log *zap.Logger, db *sql.DB, client *redis.Client) *http
 			if us == nil {
 				us = models.UserSlice{}
 			}
-			b, _ := json.Marshal(us)
+			b, _ := json.MarshalIndent(us, "", "  ")
 			w.Header().Set("content-type", "application/json")
 			w.Write(b)
 		}
